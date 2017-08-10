@@ -22,5 +22,45 @@ b.describe('Promise', function () {
     });
     b.it('creates an instance of Promise', function (t) {
         t.expect(Promise(function () {})).toBeInstance(Promise);
+        t.expect(new Promise(function () {})).toBeInstance(Promise);
+    }, 2);
+    b.resolve('has can return a resolved promise', function (t) {
+        var pointer = {};
+        var p = Promise.resolve(pointer);
+        t.expect(p).toBeInstance(Promise);
+        return p;
+    }, 1);
+    b.it('will resolve its handlers synchronously', function (t) {
+        var pointer = {};
+        var p = Promise.resolve(pointer);
+        t.expect(p).toBeInstance(Promise);
+        p.then(function (value) {
+            t.expect(value).toBe(pointer);
+        });
+    }, 2);
+    b.resolve('can chain promises together', function (t) {
+        var pointer = {
+            counter: 0
+        };
+        var p = Promise.resolve(pointer).then(function (pointer) {
+            t.expect(pointer.counter).toBe(0);
+            pointer.counter += 1;
+            return pointer;
+        }).then(sleep(0)).then(function (pointer) {
+            t.expect(pointer.counter).toBe(2);
+        });
+        t.expect(pointer.counter).toBe(1);
+        pointer.counter += 1;
+        return p;
+
+        function sleep(timeout) {
+            return function (value) {
+                return new Promise(function (success) {
+                    setTimeout(function () {
+                        success(value);
+                    }, timeout);
+                });
+            };
+        }
     });
 });

@@ -32,8 +32,8 @@ module.exports = function maker(async) {
         then: function (whensuccessful, whenfailed) {
             var promise = this;
             return promiseProxy(function (pro) {
-                addToQueue(promise, QUEUE, [pro, whensuccessful, whenfailed]);
                 var intrnl = internal(promise);
+                addToQueue(promise, QUEUE, [pro, whensuccessful, whenfailed]);
                 if (intrnl[PENDING]) {
                     return;
                 }
@@ -61,13 +61,35 @@ module.exports = function maker(async) {
             return promiseProxy(function (pro, success, failure) {
                 var caught, result, intrnl = internal(promise);
                 addToQueue(promise, QUEUE, [pro, null, erred]);
-                if (promise.is(PENDING)) {
+                if (intrnl[PENDING]) {
                     return;
                 }
                 emptyQueue(promise, intrnl[FULFILLED], resultant(promise));
             });
         }
     };
+    /**
+     * Waits for all promises passed into it to wait and succeed. Will be rejected if any of the promises are rejcted
+     * @name Promise#all
+     * @param {Array} promises list of promises to wait to complete.
+     * @example
+     * var newpromise = Promise.all([p1, p2, p3]).then(function (results) {
+     *     _.isArray(results); // true
+     * });
+     */
+    Promise.all = raceAllCurry(BOOLEAN_TRUE);
+    /**
+     * Waits for any of the promises to complete. A fulfillment or rejection of any of the promises passed in would trigger the resolution in the same direction of the promise that gets created.
+     * @name Promise#race
+     * @param {Array} promises list of promises to wait to complete.
+     * @example
+     * var racePromise = Promise.race([p1, p2, p3]).then(function (first) {
+     *     // first one to finish wins!
+     * });
+     */
+    Promise.race = raceAllCurry();
+    Promise.resolve = autoResolve(BOOLEAN_TRUE);
+    Promise.reject = autoResolve();
     return Promise;
 
     function Promise(fn_) {
@@ -93,28 +115,6 @@ module.exports = function maker(async) {
         fn(thenner, catcher);
         return promise;
     }
-    /**
-     * Waits for all promises passed into it to wait and succeed. Will be rejected if any of the promises are rejcted
-     * @name Promise#all
-     * @param {Array} promises list of promises to wait to complete.
-     * @example
-     * var newpromise = Promise.all([p1, p2, p3]).then(function (results) {
-     *     _.isArray(results); // true
-     * });
-     */
-    Promise.all = raceAllCurry(BOOLEAN_TRUE);
-    /**
-     * Waits for any of the promises to complete. A fulfillment or rejection of any of the promises passed in would trigger the resolution in the same direction of the promise that gets created.
-     * @name Promise#race
-     * @param {Array} promises list of promises to wait to complete.
-     * @example
-     * var racePromise = Promise.race([p1, p2, p3]).then(function (first) {
-     *     // first one to finish wins!
-     * });
-     */
-    Promise.race = raceAllCurry();
-    Promise.resolve = autoResolve(BOOLEAN_TRUE);
-    Promise.reject = autoResolve();
 
     function raceAllCurry(waits) {
         return function (list, bool) {
