@@ -17,5 +17,14 @@
   "bugs": {
     "url": "https://github.com/timelaps/promise/issues"
   },
-  "homepage": "https://github.com/timelaps/promise#readme"
+  "homepage": "https://github.com/timelaps/promise#readme",
+  "devDependencies": {
+    "@timelaps/batterie": "^1.0.71"
+  },
+  "dependencies": {
+    "@timelaps/fn": "^1.0.6",
+    "@timelaps/hacks": "^1.0.3",
+    "@timelaps/is": "^1.0.8",
+    "@timelaps/returns": "^1.0.0"
+  }
 }
