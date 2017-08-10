@@ -1,0 +1,21 @@
+{
+  "name": "@timelaps/promise",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js",
+    "share": "npm version patch && git push && npm publish"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timelaps/promise.git"
+  },
+  "keywords": [],
+  "author": "Michael McLaughlin <michael.j.mclaughlin20@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/timelaps/promise/issues"
+  },
+  "homepage": "https://github.com/timelaps/promise#readme"
+}
