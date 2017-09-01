@@ -1,1 +1,3 @@
-module.exports = global.Promise || require('./maker')(true);
+module.exports = global.Promise || require('./maker')(function (next) {
+    setTimeout(next);
+});

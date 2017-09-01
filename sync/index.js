@@ -1,1 +1,3 @@
-module.exports = require('../maker')();
+module.exports = require('../maker')(function (next) {
+    next();
+});

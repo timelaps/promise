@@ -52,15 +52,43 @@ b.describe('Promise', function () {
         t.expect(pointer.counter).toBe(1);
         pointer.counter += 1;
         return p;
-
-        function sleep(timeout) {
-            return function (value) {
-                return new Promise(function (success) {
-                    setTimeout(function () {
-                        success(value);
-                    }, timeout);
-                });
-            };
-        }
     });
+    b.resolve('will skip non functions passed to then', function (t) {
+        return Promise.resolve(1).then(Promise.resolve(2)).then(function (result) {
+            t.expect(result).toBe(1);
+        });
+    }, 1);
+    b.resolve('second argument will not catch errs inside of first', function (t) {
+        return Promise(function (success) {
+            setTimeout(function () {
+                success(null);
+            });
+        }).then(function (result) {
+            // cannot read property of null
+            var variable = result.property;
+        }, function () {
+            t.expect(true).toBeFalse();
+        }).catch(function (err) {
+            t.expect(err).toBeObject();
+        });
+    }, 1);
+    b.resolve('second argument will catch errs inside previous', function (t) {
+        return Promise.resolve().then(function (result) {
+            result.nonexistant();
+        }).then(function () {
+            t.expect(true).toBeFalse();
+        }, function (e) {
+            t.expect(e).toBeObject();
+        });
+    }, 1);
+
+    function sleep(timeout) {
+        return function (value) {
+            return new Promise(function (success) {
+                setTimeout(function () {
+                    success(value);
+                }, timeout);
+            });
+        };
+    }
 });

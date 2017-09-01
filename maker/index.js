@@ -7,8 +7,10 @@ var QUEUE = 'queue',
     isThennable = require('@timelaps/is/thennable'),
     isArrayLike = require('@timelaps/is/array-like'),
     returnsArray = require('@timelaps/returns/array'),
+    returnsFirst = require('@timelaps/returns/first'),
     wraptry = require('@timelaps/fn/wrap-try'),
     once = require('@timelaps/fn/once'),
+    isFunction = require('@timelaps/is/function'),
     isInstance = require('@timelaps/is/instance'),
     forEach = require('@timelaps/hacks/for/each'),
     throws = require('@timelaps/fn/throws');
@@ -21,7 +23,7 @@ var QUEUE = 'queue',
  * });
  */
 module.exports = function maker(async) {
-    var synchronously = !async;
+    // var synchronously = !async;
     Promise.prototype = {
         /**
          * Creates a new promise and fulfills it, if the current context is fulfilled / rejected then the new promise will be resolved in the same way.
@@ -29,8 +31,9 @@ module.exports = function maker(async) {
          * @param  {Function} failure handler to be called when the promise is rejected
          * @return {Promise} new promise
          */
-        then: function (whensuccessful, whenfailed) {
-            var promise = this;
+        then: function (whensuccessful_, whenfailed) {
+            var promise = this,
+                whensuccessful = isFunction(whensuccessful_) ? whensuccessful_ : returnsFirst;
             return promiseProxy(function (pro) {
                 var intrnl = internal(promise);
                 addToQueue(promise, QUEUE, [pro, whensuccessful, whenfailed]);
@@ -56,8 +59,9 @@ module.exports = function maker(async) {
          *     result === "default value"; // true
          * });
          */
-        catch: function (erred) {
-            var promise = this;
+        catch: function (erred_) {
+            var promise = this,
+                erred = isFunction(erred_) ? erred_ : returnsFirst;
             return promiseProxy(function (pro, success, failure) {
                 var caught, result, intrnl = internal(promise);
                 addToQueue(promise, QUEUE, [pro, null, erred]);
@@ -229,11 +233,7 @@ module.exports = function maker(async) {
 
     function emptiesQueue(p, bool, original) {
         return function (argument) {
-            if (synchronously) {
-                return empty();
-            } else {
-                return setTimeout(empty);
-            }
+            async(empty);
 
             function empty() {
                 return emptyQueue(p, bool, argument, original);
