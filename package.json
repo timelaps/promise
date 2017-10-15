@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@timelaps/fn": "^1.0.19",
-    "@timelaps/hacks": "^1.0.6",
+    "@timelaps/hacks": "^1.0.7",
     "@timelaps/is": "^1.0.15",
     "@timelaps/n": "^1.0.33",
     "@timelaps/returns": "^1.0.2"

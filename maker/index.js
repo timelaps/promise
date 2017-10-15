@@ -109,7 +109,7 @@ module.exports = function maker(asap) {
             pro = fn;
             fn = function (s, f) {
                 // do nothing with the resulting promise
-                pro.catch(f).then(s);
+                pro.then(s, f);
             };
         }
         thenner = decision(promise, true);
@@ -133,7 +133,7 @@ module.exports = function maker(asap) {
                     if (isThennable(promise)) {
                         promise.then(function (data) {
                             counter(index, data);
-                        }).catch(function (res) {
+                        }, function (res) {
                             failed = true;
                             return counter(index, res);
                         });
@@ -228,7 +228,7 @@ module.exports = function maker(asap) {
             var argument = reduced[1];
             var nextresolution = reduced[2];
             if (isThennable(argument)) {
-                argument.then(emptiesQueue(nextp, nextresolution)).catch(emptiesQueue(nextp));
+                argument.then(emptiesQueue(nextp, nextresolution), emptiesQueue(nextp));
             } else {
                 emptyQueue(nextp, nextresolution, argument, false);
             }
