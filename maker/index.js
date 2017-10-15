@@ -11,7 +11,7 @@ var QUEUE = 'queue',
     isFunction = require('@timelaps/is/function'),
     isInstance = require('@timelaps/is/instance'),
     forEach = require('@timelaps/n/for/each'),
-    reduce = require('@timelaps/n/reduce'),
+    map = require('@timelaps/n/map'),
     throws = require('@timelaps/fn/throws');
 /**
  * Implementation just like the native one. Use this object in order to ensure that your promises will work across all browsers, including those that do not support Promises natively. Pass true as the second argument to make the class execute the function synchronously. This prevents the stack jump that regular promises enforce.
@@ -29,18 +29,10 @@ module.exports = function maker(asap) {
          * @param  {Function} failure handler to be called when the promise is rejected
          * @return {Promise} new promise
          */
-        then: function (whensuccessful_, whenfailed) {
-            var promise = this,
-                whensuccessful = isFunction(whensuccessful_) ? whensuccessful_ : returnsFirst;
-            return promiseProxy(function (pro) {
-                var intrnl = internal(promise);
-                addToQueue(promise, QUEUE, [pro, whensuccessful, whenfailed]);
-                if (intrnl[PENDING]) {
-                    return;
-                }
-                emptyQueue(promise, intrnl[FULFILLED], resultant(promise));
-            });
-        },
+        then: next(function (pro, a_, b) {
+            var a = isFunction(a_) ? a_ : returnsFirst;
+            return [pro, a, b];
+        }),
         /**
          * Catches errors in the then success / failure handlers.
          * @param  {Function} erred Handler to run if a previous handler errs out.
@@ -57,19 +49,25 @@ module.exports = function maker(asap) {
          *     result === "default value"; // true
          * });
          */
-        catch: function (erred_) {
-            var promise = this,
-                erred = isFunction(erred_) ? erred_ : returnsFirst;
-            return promiseProxy(function (pro, success, failure) {
-                var caught, result, intrnl = internal(promise);
-                addToQueue(promise, QUEUE, [pro, null, erred]);
+        catch: next(function (pro, a_) {
+            var a = isFunction(a_) ? a_ : returnsFirst;
+            return [pro, null, a];
+        })
+    };
+
+    function next(fn) {
+        return function (a, b) {
+            var promise = this;
+            return promiseProxy(function (pro) {
+                var intrnl = internal(promise);
+                addToQueue(promise, QUEUE, fn(pro, a, b));
                 if (intrnl[PENDING]) {
                     return;
                 }
                 emptyQueue(promise, intrnl[FULFILLED], resultant(promise));
             });
         }
-    };
+    }
     /**
      * Waits for all promises passed into it to wait and succeed. Will be rejected if any of the promises are rejcted
      * @name Promise#all
@@ -191,16 +189,19 @@ module.exports = function maker(asap) {
             return result;
         }
         delete intrnl[QUEUE];
-        var reduced = reduce(queue, function (memo, current) {
+        var bound = map(queue, function (current) {
             var nextp = current[0],
                 nextresolution = true,
                 argument = wrapTry(execute, catches);
-            memo.push([
-                nextp,
-                argument,
-                nextresolution
-            ]);
-            return memo;
+            return callNext;
+
+            function callNext(reduced) {
+                if (isThennable(argument)) {
+                    argument.then(emptiesQueue(nextp, nextresolution), emptiesQueue(nextp));
+                } else {
+                    emptyQueue(nextp, nextresolution, argument, false);
+                }
+            }
 
             function execute() {
                 var target, res = result;
@@ -222,21 +223,10 @@ module.exports = function maker(asap) {
                 internal(nextp).result = result;
                 return e;
             }
-        }, []);
-        forEach(reduced, function (reduced) {
-            var nextp = reduced[0];
-            var argument = reduced[1];
-            var nextresolution = reduced[2];
-            if (isThennable(argument)) {
-                argument.then(emptiesQueue(nextp, nextresolution), emptiesQueue(nextp));
-            } else {
-                emptyQueue(nextp, nextresolution, argument, false);
-            }
         });
+        forEach(bound, callBound);
         return result;
     }
-
-
 
     function emptiesQueue(p, bool, original) {
         return function (argument) {
@@ -270,9 +260,12 @@ module.exports = function maker(asap) {
     }
 };
 
+function callBound(fn) {
+    fn();
+}
+
 function addToQueue(promise, key, list) {
-    var queue = getQueue(promise, key);
-    queue.push(list);
+    getQueue(promise, key).push(list);
 }
 
 function getQueue(p, key) {

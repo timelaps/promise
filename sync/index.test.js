@@ -86,10 +86,6 @@ b.describe('Promise', function () {
         var p = new Promise(function (resolve) {
             setTimeout(resolve);
         });
-        var finished;
-        // var fin = new Promise(function (resolve, reject) {
-        //     finished = resolve;
-        // });
         var p1 = p.then(function () {
             counter++;
             a = counter;
