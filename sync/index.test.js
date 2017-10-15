@@ -81,6 +81,31 @@ b.describe('Promise', function () {
             t.expect(e).toBeObject();
         });
     }, 1);
+    b.resolve('add and exection order are maintained', function (t) {
+        var a, b, c, counter = 0;
+        var p = new Promise(function (resolve) {
+            setTimeout(resolve);
+        });
+        var finished;
+        // var fin = new Promise(function (resolve, reject) {
+        //     finished = resolve;
+        // });
+        var p1 = p.then(function () {
+            counter++;
+            a = counter;
+            t.expect(a).toBe(1);
+        }).then(function () {
+            counter++;
+            b = counter;
+            t.expect(b).toBe(3);
+        });
+        var p2 = p.then(function () {
+            counter++;
+            c = counter;
+            t.expect(c).toBe(2);
+        });
+        return Promise.all([p1, p2]);
+    });
 
     function sleep(timeout) {
         return function (value) {

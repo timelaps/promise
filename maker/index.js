@@ -2,17 +2,16 @@ var QUEUE = 'queue',
     PENDING = 'pending',
     REJECTED = 'rejected',
     FULFILLED = 'fulfilled',
-    BOOLEAN_TRUE = true,
-    BOOLEAN_FALSE = false,
     isThennable = require('@timelaps/is/thennable'),
     isArrayLike = require('@timelaps/is/array-like'),
     returnsArray = require('@timelaps/returns/array'),
     returnsFirst = require('@timelaps/returns/first'),
-    wraptry = require('@timelaps/fn/wrap-try'),
+    wrapTry = require('@timelaps/fn/wrap-try'),
     once = require('@timelaps/fn/once'),
     isFunction = require('@timelaps/is/function'),
     isInstance = require('@timelaps/is/instance'),
-    forEach = require('@timelaps/hacks/for/each'),
+    forEach = require('@timelaps/n/for/each'),
+    reduce = require('@timelaps/n/reduce'),
     throws = require('@timelaps/fn/throws');
 /**
  * Implementation just like the native one. Use this object in order to ensure that your promises will work across all browsers, including those that do not support Promises natively. Pass true as the second argument to make the class execute the function synchronously. This prevents the stack jump that regular promises enforce.
@@ -22,8 +21,7 @@ var QUEUE = 'queue',
  *     success();
  * });
  */
-module.exports = function maker(async) {
-    // var synchronously = !async;
+module.exports = function maker(asap) {
     Promise.prototype = {
         /**
          * Creates a new promise and fulfills it, if the current context is fulfilled / rejected then the new promise will be resolved in the same way.
@@ -49,7 +47,7 @@ module.exports = function maker(async) {
          * @return {Promise}
          * @example
          * Promise(function () {
-         *     // async process
+         *     // asap process
          * }).then(function () {
          *     throw new Error("invalid result detected");
          * }).catch(function (e) {
@@ -81,7 +79,7 @@ module.exports = function maker(async) {
      *     _.isArray(results); // true
      * });
      */
-    Promise.all = raceAllCurry(BOOLEAN_TRUE);
+    Promise.all = raceAllCurry(true);
     /**
      * Waits for any of the promises to complete. A fulfillment or rejection of any of the promises passed in would trigger the resolution in the same direction of the promise that gets created.
      * @name Promise#race
@@ -92,7 +90,7 @@ module.exports = function maker(async) {
      * });
      */
     Promise.race = raceAllCurry();
-    Promise.resolve = autoResolve(BOOLEAN_TRUE);
+    Promise.resolve = autoResolve(true);
     Promise.reject = autoResolve();
     return Promise;
 
@@ -105,7 +103,7 @@ module.exports = function maker(async) {
         var pro, thenner, catcher, fn = fn_,
             promise = this,
             intnrl = internal(promise);
-        intnrl[PENDING] = BOOLEAN_TRUE;
+        intnrl[PENDING] = true;
         if (isThennable(fn)) {
             // native promise or alternate promise
             pro = fn;
@@ -114,8 +112,8 @@ module.exports = function maker(async) {
                 pro.catch(f).then(s);
             };
         }
-        thenner = once(emptiesQueue(promise, BOOLEAN_TRUE, BOOLEAN_TRUE));
-        catcher = once(emptiesQueue(promise, BOOLEAN_FALSE, BOOLEAN_TRUE));
+        thenner = decision(promise, true);
+        catcher = decision(promise, false);
         fn(thenner, catcher);
         return promise;
     }
@@ -126,7 +124,7 @@ module.exports = function maker(async) {
                 throws('promise list is not iteratable.');
             }
             return Promise(function (success, failure) {
-                var failed, length = list[LENGTH],
+                var failed, length = list.length,
                     memo = [];
                 if (!length) {
                     return success([]);
@@ -136,7 +134,7 @@ module.exports = function maker(async) {
                         promise.then(function (data) {
                             counter(index, data);
                         }).catch(function (res) {
-                            failed = BOOLEAN_TRUE;
+                            failed = true;
                             return counter(index, res);
                         });
                     } else {
@@ -179,33 +177,30 @@ module.exports = function maker(async) {
             queue = intrnl[QUEUE],
             pending = intrnl[PENDING];
         if (original) {
-            intrnl[PENDING] = BOOLEAN_FALSE;
+            intrnl[PENDING] = false;
             if (!pending) {
                 // one of the functions has already been called
                 return result;
             }
         }
-        intrnl[PENDING] = BOOLEAN_FALSE;
-        intrnl[bool ? FULFILLED : REJECTED] = BOOLEAN_TRUE;
+        intrnl[PENDING] = false;
+        intrnl[bool ? FULFILLED : REJECTED] = true;
         intrnl.result = result;
         if (!queue || !queue.length) {
             // nothing to do
             return result;
         }
         delete intrnl[QUEUE];
-        forEach(queue, function (current) {
+        var reduced = reduce(queue, function (memo, current) {
             var nextp = current[0],
-                nextresolution = BOOLEAN_TRUE,
-                argument = wraptry(execute, catches);
-            executeNext();
-
-            function executeNext() {
-                if (isThennable(argument)) {
-                    argument.then(emptiesQueue(nextp, nextresolution)).catch(emptiesQueue(nextp));
-                } else {
-                    emptyQueue(nextp, nextresolution, argument, BOOLEAN_FALSE);
-                }
-            }
+                nextresolution = true,
+                argument = wrapTry(execute, catches);
+            memo.push([
+                nextp,
+                argument,
+                nextresolution
+            ]);
+            return memo;
 
             function execute() {
                 var target, res = result;
@@ -223,17 +218,29 @@ module.exports = function maker(async) {
             }
 
             function catches(e) {
-                nextresolution = BOOLEAN_FALSE;
+                nextresolution = false;
                 internal(nextp).result = result;
                 return e;
+            }
+        }, []);
+        forEach(reduced, function (reduced) {
+            var nextp = reduced[0];
+            var argument = reduced[1];
+            var nextresolution = reduced[2];
+            if (isThennable(argument)) {
+                argument.then(emptiesQueue(nextp, nextresolution)).catch(emptiesQueue(nextp));
+            } else {
+                emptyQueue(nextp, nextresolution, argument, false);
             }
         });
         return result;
     }
 
+
+
     function emptiesQueue(p, bool, original) {
         return function (argument) {
-            async(empty);
+            asap(empty);
 
             function empty() {
                 return emptyQueue(p, bool, argument, original);
@@ -242,7 +249,7 @@ module.exports = function maker(async) {
     }
 
     function decision(p, bool) {
-        return once(emptiesQueue(p, bool));
+        return once(emptiesQueue(p, bool, true));
     }
 
     function promiseProxy(fn) {
