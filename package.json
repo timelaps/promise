@@ -22,6 +22,7 @@
     "@timelaps/batterie": "^1.0.75"
   },
   "dependencies": {
+    "@timelaps/async": "^1.0.2",
     "@timelaps/fn": "^1.0.19",
     "@timelaps/hacks": "^1.0.7",
     "@timelaps/is": "^1.0.15",

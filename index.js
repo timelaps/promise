@@ -1,1 +1,1 @@
-module.exports = global.Promise || require('./maker')(require('@timelaps/hacks/asap'));
+module.exports = global.Promise || require('./maker')(require('@timelaps/async/asap').set);
