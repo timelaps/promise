@@ -4,9 +4,9 @@ a quick function for controlling how and when a promise resolves its subsequent 
 
 install with
 ```javascript
-npm install
+npm install @timelaps/promise
 ```
-and see the tests pass with
+and see the tests with
 ```javascript
 npm t
 ```
